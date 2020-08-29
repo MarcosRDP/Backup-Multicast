@@ -1,44 +1,55 @@
-# Biblioteca Socket
-import socket
-import struct
-import sys
+# Bibliotecas do Python necessarios para criar o Socket
+import sys, struct, socket, json
 
-message = 'Backup Server?'
-multicast_group = ('225.0.0.1', 1905)
+def send_to_server(message, addr, port):
+        multicast_group = (addr, port)
 
-# Create the datagram socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	# Inicia o Socket
+	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# Set a timeout so the socket does not block indefinitely when trying
-# to receive data.
-sock.settimeout(0.2)
+	# Adiciona um timeout para o Socket
+	sock.settimeout(0.2)
 
+	# Configura o Socket
+	ttl = struct.pack('b', 1)
+	sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
+	try:
+	    # Envia a mensagem para o grupo Multicast
+            sent = sock.sendto(message, multicast_group)
 
-# Set the time-to-live for messages to 1 so they do not go past the
-# local network segment.
-ttl = struct.pack('b', 1)
-sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+    	    # Loop que aguarda resposta do Servidor
+    	    while True:
+            	print '\nAguardando resposta!'
+            
+            	try:
+                        # Recebe mensagem do servidor
+            		data, server_addr = sock.recvfrom(16)
+                # Verifica o Timeout programado
+            	except socket.timeout:
+                	print 'Tempo de resposta excedido!'
+                	break
+		# Apresenta os dados recebidos para o usuario
+        	else:
+            		print '\nResposta recebida: "%s"\nOrigem: %s' % (data, server_addr)
+        # Finaliza o Socket
+	finally:
+    	    print >>sys.stderr, '\nEncerando Socket!'
+            sock.close()
 
-
-
-try:
-
-    # Send data to the multicast group
-    print >>sys.stderr, 'sending "%s"' % message
-    sent = sock.sendto(message, multicast_group)
-
-    # Look for responses from all recipients
-    while True:
-        print >>sys.stderr, 'waiting to receive'
-        try:
-            data, server = sock.recvfrom(16)
-        except socket.timeout:
-            print >>sys.stderr, 'timed out, no more responses'
-            break
-        else:
-            print >>sys.stderr, 'received "%s" from %s' % (data, server)
-
-finally:
-    print >>sys.stderr, 'closing socket'
-    sock.close()
+# Programa Principal
+if __name__ == '__main__':
+    # Verifica os argumentos do programa
+    try:
+        addr = sys.argv[1]
+        port = int(sys.argv[2])
+        message = 'Backup Server?'
+    # IP e porta padrao que sera utilizado
+    except IndexError:
+        addr = '225.0.0.1'
+        port = 1905
+        message = 'Backup Server?'
+    # Execucao principal
+    finally:
+        print 'Enviando mensagem: %s\nDestino: %s\nPorta:%d' % (message, addr, port)
+        send_to_server(message, addr, port)
