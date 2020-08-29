@@ -26,7 +26,7 @@ def mcast_server(addr, port):
                 print 'Requisicao: %s\nOrigem: %s\nResposta: %s' % (data, addr_dest, answer)
             	fd.sendto(answer, addr_dest)
     except KeyboardInterrupt:
-        print 'done'
+        print '\nServidor encerrado!'
         sys.exit(0)
 
 # Verifica o pedido recebido
@@ -51,5 +51,11 @@ if __name__ == '__main__':
         port = 1905
     # Execucao principal
     finally:
-        print 'Executando o Servidor:\nIP: %s\nPorta:%d' % (addr, port)
+        print 'Executando o Servidor:\nIP: %s\nPorta: %d' % (addr, port)
         mcast_server(addr, port)
+
+
+
+
+
+

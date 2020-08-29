@@ -24,7 +24,7 @@ def send_to_server(message, addr, port):
             
             	try:
                         # Recebe mensagem do servidor
-            		data, server_addr = sock.recvfrom(16)
+            		data, server_addr = sock.recvfrom(1024)
                 # Verifica o Timeout programado
             	except socket.timeout:
                 	print 'Tempo de resposta excedido!'
@@ -34,7 +34,7 @@ def send_to_server(message, addr, port):
             		print '\nResposta recebida: "%s"\nOrigem: %s' % (data, server_addr)
         # Finaliza o Socket
 	finally:
-    	    print >>sys.stderr, '\nEncerando Socket!'
+    	    print '\nEncerando Socket!'
             sock.close()
 
 # Programa Principal
@@ -51,5 +51,8 @@ if __name__ == '__main__':
         message = 'Backup Server?'
     # Execucao principal
     finally:
-        print 'Enviando mensagem: %s\nDestino: %s\nPorta:%d' % (message, addr, port)
+        print 'Enviando mensagem: %s\nDestino: %s\nPorta: %d' % (message, addr, port)
         send_to_server(message, addr, port)
+
+
+
