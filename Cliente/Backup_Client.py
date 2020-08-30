@@ -11,7 +11,23 @@ def getFolderInfo(clientFolder):
                 info.update(file)
     return info
 
-def send_to_server(message, addr, port, Folder_path):
+def getFiles(clientFolder):
+    info = []
+    for folderName, subfolders, filenames in os.walk(clientFolder):
+            for filename in filenames:
+                file = filename
+                info.append(file)
+    return info
+
+def getFolder(clientFolder):
+    info = {}
+    for folderName, subfolders, filenames in os.walk(clientFolder):
+            for filename in filenames:
+                file = {filename:folderName}
+                info.update(file)
+    return info
+
+def send_to_server(message, addr, port, Folder_path, backupName):
         # Resposta padrao
         answer = "Null"
 
@@ -54,20 +70,16 @@ def send_to_server(message, addr, port, Folder_path):
             sock.close()
             # Caso tenha recebido uma resposta, inicia a conexao TCP para o Backup
             if (answer != "Null"):
-                # Verifica as informacoes sobre as pastas de backup
-                info = json.dumps(getFolderInfo(Folder_path))
+                # Define os arquivos de backup
+                listaArquivos = getFiles(Folder_path)
+                listaPath = getFolder(Folder_path)
+
                 # Avisa ao usuario que vai iniciar a conexao TCP
             	print 'Iniciando conexao!\nDestino: %s\nPorta: %d' % (answer["addr"], answer["port"])
 
                 # Inicia a conexao TCP, com o endereco e porta passado pelo servidor Multicast
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((answer["addr"], answer["port"]))
-
-                # Envia para o servidor a pasta que fara o Backup
-                sock.send(info)
-
-                msg = sock.recv(1024)
-                listaArquivos = json.loads(msg)
 
 		sock.send('Primeiro : 344')
            
@@ -79,9 +91,11 @@ def send_to_server(message, addr, port, Folder_path):
 				sock.send('Novo : 345')
 			first = 0
 			decide = ''
-                	arq = open('%s/%s' % (Folder_path, arquivo), 'r')
+                	arq = open('%s/%s' % (listaPath[arquivo], arquivo), 'r')
                         while(decide != 'pronto'):
                                 msg = sock.recv(1024)
+                                if(msg == 'Caminho? : 340'):
+					sock.send(listaPath[arquivo])
                         	if(msg == 'Nome? : 346'):
                                 	sock.send(arquivo)
 
@@ -89,14 +103,12 @@ def send_to_server(message, addr, port, Folder_path):
                                 	for i in arq.readlines():
                         			sock.send(i)
 						msg = sock.recv(1024)
-						if(msg != 'Continua : 347'):
-							print 'Erro: %s\n' % (msg)
 					decide = 'pronto'
                         arq.close()
 		sock.send('Encerrou : 348')
 
                 # Encerra a conexao TCP
-                tcp.close()
+                sock.close()
 
 # Programa Principal
 if __name__ == '__main__':
@@ -105,16 +117,18 @@ if __name__ == '__main__':
         addr = sys.argv[1]
         port = int(sys.argv[2])
         Folder_path = sys.argv[3]
+        backupName = sys.argv[4]
     # IP e porta padrao que sera utilizado
     except IndexError:
         addr = '225.0.0.1'
         port = 1905
-        Folder_path = './Teste'
+        Folder_path = 'Teste'
+        backupName = 'Teste'
     # Execucao principal
     finally:
         message = 'Backup Server?'
         print 'Enviando mensagem: %s\nDestino: %s\nPorta: %d' % (message, addr, port)
-        send_to_server(message, addr, port, Folder_path)
+        send_to_server(message, addr, port, Folder_path, backupName)
 
 
 

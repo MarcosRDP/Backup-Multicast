@@ -60,106 +60,60 @@ def tcp_server(port_tcp):
 def conect_TCP(con, cliente):
     print '\nConectado ao cliente: %s' % (str(cliente))
 
-    # Executa o loop de troca de mensagens, ate finalizar o Backup
+    shutil.rmtree('./Backup')
+    os.makedirs('./Backup')
+
+    # Inicia um loop, ate receber todos os arquivos
     while True:
-        # Recebe a mensagem com as pastas para o Backup
-        msg = con.recv(1024)
-        if not msg: break
-        clientFolderBlueprint = json.loads(msg)
+    	# Recebe os dados
+        dados = con.recv(1024)
 
-        # Cria um Log com as operacoes de Backup feitas
-        backupLog = shelve.open('./log/backupLog')
-
-        # Cria lista com os armazenamentos
-        requestTwo = backupActions(clientFolderBlueprint, backupLog)
-        requestTwo = json.loads(requestTwo)
-        requestToAdd = requestTwo["requestToAdd"]
-        requestToSend = json.dumps(requestToAdd)
-        requestToDelete = requestTwo["requestToDelete"]
-
-        # Envia uma mensagem para o cliente com os arquivos necessarios
-        con.send(requestToSend)
-
-	# Inicia um loop, ate receber todos os arquivos
-        while True:
-            # Recebe os dados
+        # Verifica se e o codigo que indica o primeiro arquivo
+        if(dados == 'Primeiro : 344'):
+            # Vai requirir o caminho
+            con.send('Caminho? : 340')
+            # Recebe o caminho
+            caminho = con.recv(1024)
+            if not os.path.exists('./Backup/%s' % (caminho)):
+    		os.makedirs('./Backup/%s' % (caminho))
+            # Vai requirir o nome do arquivo
+            con.send('Nome? : 346')
+            # Recebe o nome do arquivo e o abre
             dados = con.recv(1024)
+            arq = open('./Backup/%s/%s' % (caminho, dados), 'w')
+            # Indica ao cliente que pode continuar
+            con.send('Continua : 347')
 
-            # Verifica se e o codigo que indica o primeiro arquivo
-            if(dados == 'Primeiro : 344'):
-                # Vai requirir o nome do arquivo
-            	con.send('Nome? : 346')
-                # Recebe o nome do arquivo e o abre
-                dados = con.recv(1024)
-                arq = open('./Backup/%s' % (dados), 'w')
-                # Indica ao cliente que pode continuar
-                con.send('Continua : 347')
+        # Verifica se e o codigo que indica um novo arquivo
+        elif(dados == 'Novo : 345'):
+            # Fecha o arquivo
+            arq.close()
+            # Vai requirir o caminho
+            con.send('Caminho? : 340')
+            # Recebe o caminho
+            caminho = con.recv(1024)
+            if not os.path.exists('./Backup/%s' % (caminho)):
+    		os.makedirs('./Backup/%s' % (caminho))
+            # Vai requirir o nome do arquivo
+            con.send('Nome? : 346')
+            # Recebe o nome do arquivo e o abre
+            dados = con.recv(1024)
+            arq = open('./Backup/%s/%s' % (caminho, dados), 'w')
+            # Indica ao cliente que pode continuar
+            con.send('Continua : 347')
 
-            # Verifica se e o codigo que indica um novo arquivo
-            elif(dados == 'Novo : 345'):
-                # Fecha o arquivo
-                arq.close()
-                # Vai requirir o nome do arquivo
-            	con.send('Nome? : 346')
-                # Recebe o nome do arquivo e o abre
-                dados = con.recv(1024)
-                arq = open('./Backup/%s' % (dados), 'w')
-                # Indica ao cliente que pode continuar
-                con.send('Continua : 347')
+        elif(dados == 'Encerrou : 348'):
+            # Fecha o arquivo
+            arq.close()
+            # Encerra a comunicacao com o
+            print '\nConexao com o cliente %s encerrada!' % (str(cliente))
+            con.close()
+            thread.exit()
 
-            elif(dados == 'Encerrou : 348'):
-                # Fecha o arquivo
-                arq.close()
-                # Encerra a comunicacao com o
-                print '\nConexao com o cliente %s encerrada!' % (str(cliente))
-                con.close()
-                thread.exit()
-
-            else:
-                arq.write(dados)
-                # Indica ao cliente que pode continuar
-                con.send('Continua : 347')
-    
-
-def backupActions(clientFolderBlueprint, backupLog):
-    #Variaveis
-    requestToAdd = []
-    requestToDelete = []
-
-    #Abre arquivos no backup
-    #Le nome dos arquivos armazenados no backup
-    backupLogFiles = list(backupLog.keys())        
-    for filename in backupLogFiles:
-        #Checa se arquivo existente no backup tambem existe no cliente
-        if(clientFolderBlueprint.get(filename)):
-            #Checa se o arquivo no cliente foi modificado
-            if(clientFolderBlueprint[filename] != backupLog[filename]):
-                requestToDelete.append(filename)
-                requestToAdd.append(filename)
-                backupLog[filename] = clientFolderBlueprint[filename]
         else:
-            requestToDelete.append(filename)
-            del backupLog[filename]
-    #Checa quais arquivos devem ser adicionadors ao backup
-    toBeAdded = [key for key in clientFolderBlueprint.keys() if key not in backupLogFiles]
-    requestToAdd.extend(list(toBeAdded))
-    x = json.dumps(requestToAdd)
-    y = json.dumps(requestToDelete)
-    answer = '{ "requestToAdd" : %s, "requestToDelete" : %s }' % (x, y)
-    return answer
-    
-
-#Adiciona os arquivos a pasta de backup  simulacao da acao do servidor ao recever os arquivos atualizados do cliente
-def sendToBackupFolder():
-    for filesToAdd in requestToAdd:
-        shutil.copy2(os.path.join(clientFolder,filesToAdd),os.path.join(backupFolder,filesToAdd))
-        backupLog[filesToAdd] = clientFolderBlueprint[filesToAdd]
-
-#Remove arquivos da pasta backup e atualiza historico 
-def manageBackupHistory():
-    for filesToDelele in requestToDelete:
-        os.unlink(os.path.join(backupFolder,filesToDelele))
-        del backupLog[filesToDelele]
+            arq.write(dados)
+            # Indica ao cliente que pode continuar
+            con.send('Continua : 347')
  
 # Programa Principal
 if __name__ == '__main__':
@@ -179,13 +133,6 @@ if __name__ == '__main__':
         thread.start_new_thread(tcp_server, tuple([port_tcp]))
         mcast_server(addr, port, port_tcp)
 
-####
-#
-#requestToDelete = []
-#requestToAdd = []
-
-#folderName = 'backup'
-#backupFolder = os.path.join(os.getcwd(),folderName)
 
 
 
