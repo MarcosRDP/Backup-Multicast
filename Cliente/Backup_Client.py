@@ -2,6 +2,9 @@
 import sys, struct, socket, json
 
 def send_to_server(message, addr, port):
+        # Resposta padrao
+        answer = "NulL"
+
         multicast_group = (addr, port)
 
 	# Inicia o Socket
@@ -32,10 +35,24 @@ def send_to_server(message, addr, port):
 		# Apresenta os dados recebidos para o usuario
         	else:
             		print '\nResposta recebida: "%s"\nOrigem: %s' % (data, server_addr)
+                        # Divide a resposta JSON recebida
+                        answer = json.loads(data)
+                        break
         # Finaliza o Socket
 	finally:
-    	    print '\nEncerando Socket!'
+    	    print '\nEncerando Socket de comunicacao Multicast!'
             sock.close()
+            # Caso tenha recebido uma resposta, inicia a conexao TCP para o Backup
+            if (answer != "Null"):
+            	print 'Iniciando conexao!\nDestino: %s\nPorta: %d' % (answer["addr"], answer["port"])
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((answer["addr"], answer["port"]))
+                print 'Para sair use CTRL+X\n'
+                msg = raw_input()
+                while msg <> '\x18':
+            		sock.send (msg)
+            		msg = raw_input()
+                tcp.close()
 
 # Programa Principal
 if __name__ == '__main__':

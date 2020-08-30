@@ -35,8 +35,7 @@ def analise_pedido(data, port_tcp):
         answer = 'null'
         # Verifica se a mensagem e para esse servidor
 	if(data == 'Backup Server?'):
-            info = '{"addr": "127.0.0.1", "port": "%d"}' % (port_tcp)
-            answer = json.dumps(info)
+            answer = '{"addr": "127.0.0.1", "port": %d}' % (port_tcp)
         return answer
 
 # Cria a conexao TCP
@@ -59,7 +58,7 @@ def tcp_server(port_tcp):
 
 # TCP Conectado
 def conect_TCP(con, cliente):
-    print '\nConectado ao cliente: %s' % (cliente)
+    print '\nConectado ao cliente: %s' % (str(cliente))
 
     # Executa o loop de troca de mensagens, ate finalizar o Backup
     while True:
@@ -67,7 +66,7 @@ def conect_TCP(con, cliente):
         if not msg: break
         print cliente, msg
 
-    print '\Conexao com o cliente %s encerrada!' % (cliente)
+    print '\nConexao com o cliente %s encerrada!' % (str(cliente))
     con.close()
     thread.exit()
  
